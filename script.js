@@ -13,21 +13,23 @@ class Particle {
     this.effect = effect;
     this.x = Math.floor(Math.random() * this.effect.width);
     this.y = Math.floor(Math.random() * this.effect.height);
-    this.speedX = Math.random() * 5 - 2.5;
-    this.speedY = Math.random() * 5 - 2.5;
+    this.speedX;
+    this.speedY;
     this.history = [{ x: this.x, y: this.y }];
     this.maxLength = Math.floor(Math.random() * 200 + 10);
     this.angle = 0;
     this.timer = this.maxLength * 2;
     this.speedModifier = Math.floor(Math.random() * 5 + 1);
+    this.colors = ["#4c026b", "#730d9e", "#9622c7", "#b44ae0", "#cd72f2"];
+    this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
   }
   draw(context) {
-    context.fillRect(this.x, this.y, 10, 10);
     context.beginPath();
     context.moveTo(this.history[0].x, this.history[0].y);
     for (let i = 0; i < this.history.length; i++) {
       context.lineTo(this.history[i].x, this.history[i].y);
     }
+    context.strokeStyle = this.color;
     context.stroke();
   }
   update() {
@@ -62,9 +64,10 @@ class Particle {
 }
 
 class Effect {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.width = this.canvas.width;
+    this.height = this.canvas.height;
     this.particles = [];
     this.numberOfParticles = 500;
 
@@ -73,7 +76,17 @@ class Effect {
     this.cols;
     this.curve = 0.5;
     this.zoom = 0.14;
+    this.debug = false;
     this.init();
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key == "d") {
+        this.debug = !this.debug;
+      }
+    });
+    window.addEventListener("resize", (e) => {
+      this.resize(e.target.innerWidth, e.target.innerHeight);
+    });
   }
   init() {
     this.rows = Math.floor(this.height / this.cellSize);
@@ -85,19 +98,46 @@ class Effect {
         this.flowFeild.push(angle);
       }
     }
-
+    this.particles = [];
     for (let i = 0; i < this.numberOfParticles; i++) {
       this.particles.push(new Particle(this));
     }
   }
+  drawGrid(context) {
+    context.save();
+    context.strokeStyle = "white";
+    context.lineWidth = 0.3;
+
+    for (let c = 0; c < this.cols; c++) {
+      context.beginPath();
+      context.moveTo(this.cellSize * c, 0);
+      context.lineTo(this.cellSize * c, this.height);
+      context.stroke();
+    }
+    for (let r = 0; r < this.rows; r++) {
+      context.beginPath();
+      context.moveTo(0, this.cellSize * r);
+      context.lineTo(this.width, this.cellSize * r);
+      context.stroke();
+    }
+    context.restore();
+  }
+  resize(width, height) {
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.width = this.canvas.width;
+    this.height = this.canvas.height;
+    this.init();
+  }
   render(context) {
+    if (this.debug) this.drawGrid(context);
     this.particles.forEach((particle) => {
       particle.draw(context);
       particle.update();
     });
   }
 }
-const effect = new Effect(canvas.width, canvas.height);
+const effect = new Effect(canvas);
 
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
